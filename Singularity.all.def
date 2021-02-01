@@ -43,12 +43,6 @@ From: ubuntu:20.04
     # Create src directory
     mkdir -p /usr/local/src/ && cd /usr/local/src
 
-    # NCBI BLAST+
-    export blsv=2.11.0
-
-    wget -qO- https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.11.0+-x64-linux.tar.gz | \
-        tar --strip-components=2 -C /usr/local/bin/ --wildcards -xz ncbi-blast-2.11.0+/bin/*
-
     # Samtools
     export hts_version=1.11;
     cd /usr/local/src/;
@@ -65,7 +59,7 @@ From: ubuntu:20.04
     echo $(pwd)
     ls -lrth
     make cairo=no -j 10 # && cp bin/gt /usr/local/bin/ && cp -r gtdata
-    make install
+    make cairo=no install
 
     # Bowtie2 (for trinity)
     cd /usr/local/src
@@ -118,7 +112,12 @@ From: ubuntu:20.04
     wget https://github.com/gpertea/gffread/releases/download/v${gfrv}/gffread-${gfrv}.Linux_x86_64.tar.gz
     tar --wildcards --strip-components=1 -xz -C /usr/local/bin "gffread-*/gffread" -f gffread-${gfrv}.Linux_x86_64.tar.gz
 
-    # MetaEUK
+    # NCBI BLAST+
+    export blsv=2.11.0
+    wget -qO- https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.11.0+-x64-linux.tar.gz | \
+        tar --strip-components=2 -C /usr/local/bin/ --wildcards -xz ncbi-blast-2.11.0+/bin/*
+
+    # MetaEUK (BUSCO)
     wget -qO- https://github.com/soedinglab/metaeuk/releases/download/4-a0f584d/metaeuk-linux-sse41.tar.gz | \
         tar -C /usr/local/bin --strip-components=2 -xz metaeuk/bin/metaeuk
 
