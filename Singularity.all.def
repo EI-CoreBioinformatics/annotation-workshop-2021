@@ -12,8 +12,9 @@ From: ubuntu:20.04
     # EVM dies with error code 255. We *cannot* test it otherwise the creation script will die.
     # evidence_modeler.pl --help
     Trinity --cite
-    gffread --help
-    gt -help
+    # GFFread --help and Gtools -h also exit with exit code 1
+    # gffread --help
+    # gt -help
     salmon --help
     minos --help
     CPC2 --help
