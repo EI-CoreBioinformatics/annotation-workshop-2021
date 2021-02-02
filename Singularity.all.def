@@ -198,6 +198,7 @@ From: ubuntu:20.04
     wget -O EVM-v1.1.1.zip https://github.com/EVidenceModeler/EVidenceModeler/archive/v1.1.1.zip
     unzip EVM-v1.1.1.zip
     mv EVidenceModeler-1.1.1/* -t /usr/local/EVM/
+    chmod +x /usr/local/EVM/evidence_modeler.pl
 
     # Diamond
     cd /usr/local/src
@@ -358,7 +359,7 @@ From: ubuntu:20.04
     plot-bamstats "@"
 
 %apprun EVM
-    /usr/local/EVM/evidence_modeler.pl
+    perl /usr/local/EVM/evidence_modeler.pl "@"
 
 %apprun Trinity
     Trinity "@"
