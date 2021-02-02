@@ -212,7 +212,7 @@ From: ubuntu:20.04
     # Mikado
     pip3 install wheel
     pip3 install python-rapidjson
-    pip3 install Mikado==2.0
+    pip3 install Mikado>=2.0
 
     # Portcullis
     cd /usr/local/src
