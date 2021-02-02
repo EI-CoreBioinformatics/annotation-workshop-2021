@@ -8,7 +8,7 @@ From: ubuntu:20.04
     export PATH=${PATH}:${TRINITY_HOME}/util/support_scripts:${TRINITY_HOME}/util/misc:${TRINITY_HOME}/trinity-plugins/BIN
     python3 --version
     python3 -c "import numpy"
-    TransDecoder.Predict
+    TransDecoder.Predict --version
     evidence_modeler.pl --help
     Trinity --cite
     gffread --help
