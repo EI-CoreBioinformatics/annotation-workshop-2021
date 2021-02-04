@@ -1,0 +1,82 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%test
+    python3 --version
+    python3 -c "import numpy"
+    samtools --version
+    mikado --help
+    minos --help
+
+%environment
+    export PYTHONDONTWRITEBYTECODE=true
+
+%post
+
+    ### Install your packages ###
+
+    export PYTHONDONTWRITEBYTECODE=true
+    apt update
+    apt install -y software-properties-common
+    add-apt-repository universe
+    add-apt-repository multiverse
+    add-apt-repository restricted
+    apt update
+    apt install -y zlib1g-dev build-essential curl autoconf automake git \
+    	libbz2-dev libncurses-dev lzma-dev python3 python3-pip liblzma-dev
+
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 20
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 20
+
+    # Samtools
+    export hts_version=1.11;
+    cd /usr/local/src/;
+    curl -L https://github.com/samtools/samtools/releases/download/${hts_version}/samtools-${hts_version}.tar.bz2 | tar xj
+    cd samtools-${hts_version} && autoreconf && ./configure && make -j 10 && make install
+
+    # Mikado
+    pip install wheel
+    pip install python-rapidjson
+    pip install "Mikado>=2.0"
+
+    # CPC2
+    cd /usr/local/src
+    git clone --depth=1 https://github.com/EI-CoreBioinformatics/CPC2
+    cd CPC2 && pip install .
+
+    # Minos
+    cd /usr/local/src
+    git clone https://github.com/EI-CoreBioinformatics/minos
+    cd minos
+    git fetch --tags
+    latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+    git checkout $latestTag
+    pip install .
+
+    # Create global folder
+    cd /usr/local/src && rm -rf *
+    apt purge -y --auto-remove autoconf automake curl git build-essential liblzma-dev \
+    	libbz2-dev libncurses-dev
+    apt clean -y
+    mkdir -p /global && cd /global
+
+%apprun snakemake
+	snakemake "@"
+
+%apprun mikado
+	mikado "@"
+
+%apprun daijin
+    daijin "@"
+
+%apprun prodigal
+    prodigal "@"
+
+%apprun samtools
+    samtools "@"
+
+%apprun diamond
+    diamond "@"
+
+%apprun portcullis
+    portcullis "@"

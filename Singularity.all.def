@@ -16,8 +16,8 @@ From: ubuntu:20.04
     # gffread --help
     # gt -help
     salmon --help
-    minos --help
-    CPC2 --help
+    portcullis --version
+    
 
 %environment
     export PYTHONDONTWRITEBYTECODE=true
@@ -212,11 +212,6 @@ From: ubuntu:20.04
     chmod +x /usr/local/bin/prodigal
     prodigal -h
 
-    # Mikado
-    pip3 install wheel
-    pip3 install python-rapidjson
-    pip3 install "Mikado>=2.0"
-
     # Portcullis
     cd /usr/local/src
     export port_version=1.2.2
@@ -238,21 +233,8 @@ From: ubuntu:20.04
     cd busco
     python setup.py bdist_wheel && pip install dist/*whl
 
-    # CPC2
-    cd /usr/local/src
-    git clone --depth=1 https://github.com/EI-CoreBioinformatics/CPC2
-    cd CPC2
-    python3 setup.py bdist_wheel && pip3 install dist/*whl
-
-    # Minos
-    cd /usr/local/src/
-    git clone --depth=1 https://github.com/EI-CoreBioinformatics/minos minos
-    cd minos
-    python3 setup.py bdist_wheel
-    pip3 install --prefix /usr/local/  dist/*whl
-
     # Create global folder and cleanup
-    apt remove -y automake autoconf curl wget git unzip cmake rsync
+    apt remove --autoremove -y automake autoconf curl wget git unzip cmake rsync
     apt clean -y
     mkdir -p /global && cd /global && rm -rf /usr/local/src/*
 
