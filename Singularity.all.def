@@ -12,11 +12,14 @@ From: ubuntu:20.04
     # EVM dies with error code 255. We *cannot* test it otherwise the creation script will die.
     # evidence_modeler.pl --help
     Trinity --cite
-    # GFFread --help and Gtools -h also exit with exit code 1
-    # gffread --help
-    # gt -help
+    gffread --version
+    gt -version
     salmon --help
     portcullis --version
+    stringtie --version
+    scallop --version
+    blastp -version  # Notice the *single* dash
+    prodigal -h
     
 
 %environment
@@ -42,13 +45,14 @@ From: ubuntu:20.04
     # Install build dependencies, BLAST+, HMMER
     apt install -y zlib1g-dev build-essential automake autoconf libcurl4-openssl-dev gnuplot \
         wget git unzip cmake rsync \
-    	libbz2-dev libncurses-dev lzma-dev python3 python3-numpy python3-dev python3-scipy \
-	    python3-pandas python3-pip libtool liblzma-dev hmmer libboost-dev '^libboost-.*71-dev' libtbb-dev \
+    	libbz2-dev libncurses-dev lzma-dev python3 python3-dev python3-numpy python3-pandas python3-scipy \
+	    python3-pip libtool liblzma-dev hmmer libboost-dev '^libboost-.*71' '^libboost-.*71-dev' libtbb-dev \
 	    augustus openjdk-14-jre
 
-    update-alternatives --install /usr/bin/python python /usr/bin/python3 20
-    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 20
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 30
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 30
     pip install wheel
+    pip install numpy pandas matplotlib setuptools sphinx tabulate snakemake
 
     # Create src directory
     mkdir -p /usr/local/src/ && cd /usr/local/src
@@ -60,6 +64,18 @@ From: ubuntu:20.04
     tar -xjf samtools-${hts_version}.tar.bz2
     cd samtools-${hts_version} && autoreconf && ./configure && make -j 10 install
     cd htslib-${hts_version} && make -j 10 install
+
+    # Portcullis
+    cd /usr/local/src
+    export port_version=1.2.2
+    wget -O portcullis-${port_version}.tar.gz https://github.com/maplesond/portcullis/archive/${port_version}.tar.gz
+    tar -xzf portcullis-${port_version}.tar.gz
+    cd portcullis-${port_version}
+    ./autogen.sh
+    ./configure
+    make -j 10
+    make -j 10 check
+    make install
 
     # Genometools
     mkdir -p /usr/local/src/genometools
@@ -212,18 +228,6 @@ From: ubuntu:20.04
     chmod +x /usr/local/bin/prodigal
     prodigal -h
 
-    # Portcullis
-    cd /usr/local/src
-    export port_version=1.2.2
-    wget -O portcullis-${port_version}.tar.gz https://github.com/maplesond/portcullis/archive/${port_version}.tar.gz
-    tar -xzf portcullis-${port_version}.tar.gz
-    cd portcullis-${port_version}
-    ./autogen.sh
-    ./configure
-    make -j 10
-    make -j 10 check
-    make install
-
     # Busco
     export bscv=5.0.0
     cd /usr/local/src/
@@ -234,57 +238,14 @@ From: ubuntu:20.04
     python setup.py bdist_wheel && pip install dist/*whl
 
     # Create global folder and cleanup
-    apt remove --autoremove -y automake autoconf curl wget git unzip cmake rsync
+    apt remove --autoremove -y automake autoconf curl wget git unzip cmake rsync libboost-dev \
+    	build-essential '^libboost-.*71-dev'
     apt clean -y
     mkdir -p /global && cd /global && rm -rf /usr/local/src/*
 
-%apprun snakemake
-        snakemake "@"
-
-%apprun minos
-        minos "@"
-
-%apprun CPC2
-        CPC2 "@"
-
-%apprun analyse_busco
-        analyse_busco "@"
-
-%apprun generate_metrics
-        generate_metrics "@"
-
-%apprun parse_mikado_gff
-        parse_mikado_gff "@"
-
-%apprun protein_completeness
-        protein_completeness "@"
-
-%apprun collapse_metrics
-        collapse_metrics "@"
-
-%apprun validate_gff3
-        validate_gff3 "@"
-
-%apprun create_release_gff3
-        create_release_gff3 "@"
-
-%apprun sanity_check
-        sanity_check "@"
-
-%apprun parse_mikado_stats
-        parse_mikado_stats "@"
-
-%apprun analyse_busco
-        analyse_busco "@"
 
 %apprun snakemake
 	snakemake "@"
-
-%apprun mikado
-	mikado "@"
-
-%apprun daijin
-    daijin "@"
 
 %apprun prodigal
     prodigal "@"
