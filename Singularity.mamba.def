@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: continuumio/miniconda3:latest
+From: continuumio/miniconda3
 
 %test
     python3 --version
@@ -19,16 +19,17 @@ From: continuumio/miniconda3:latest
 %post
 
     ### Install your packages ###
+    conda install -n base -c conda-forge -y micromamba
+    apt install -y build-essential
+    mkdir -p /usr/local/src
+    cd /usr/local/src
 
-    apt install -y wget build-essential
-    wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj --strip-components=1 bin/micromamba
+    
     export MAMBA_ROOT_PREFIX=/opt/conda/
-    ./micromamba install -n base -c bioconda -c conda-forge -y pip \
+    micromamba install -n base -c bioconda -c conda-forge -y pip \
        samtools scallop genometools-genometools gffread kallisto stringtie minimap2 hisat2 bioconda::gmap \
        bioconda::transdecoder evidencemodeler trinity diamond prodigal "bioconda::mikado>=2" portcullis \
        bioconda::busco
-
-    mkdir -p /usr/local/src
 
     # Busco
     mamba remove -y busco
@@ -54,9 +55,8 @@ From: continuumio/miniconda3:latest
     pip3 install --prefix /usr/local/  dist/*whl
 
     # Create global folder and cleanup
-    apt remove -y wget
-    apt clean -y
-    conda clean -afy
+    apt remove -y wget build-essential && apt clean -y
+    conda remove -y micromamba && conda clean -afy    
     mkdir -p /global && cd /global && rm -rf /usr/local/src/*
 
 %apprun snakemake

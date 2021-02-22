@@ -4,7 +4,6 @@ From: ubuntu:20.04
 %test
     python3 --version
     python3 -c "import numpy"
-    samtools --version
     mikado --help
     minos --help
 
@@ -31,12 +30,6 @@ From: ubuntu:20.04
 
     update-alternatives --install /usr/bin/python python /usr/bin/python3 20
     update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 20
-
-    # Samtools
-    # export hts_version=1.11;
-    # cd /usr/local/src/;
-    # curl -L https://github.com/samtools/samtools/releases/download/${hts_version}/samtools-${hts_version}.tar.bz2 | tar xj
-    # cd samtools-${hts_version} && autoreconf && ./configure && make -j 10 && make install
 
     # Mikado
     pip install wheel
