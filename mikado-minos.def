@@ -33,7 +33,7 @@ From: ubuntu:20.04
 
     # Mikado
     pip install wheel
-    pip install "Mikado>=2.0.1"
+    pip install "Mikado>=2.1.1"
 
     # CPC2
     cd /usr/local/src
@@ -44,9 +44,8 @@ From: ubuntu:20.04
     cd /usr/local/src
     git clone https://github.com/EI-CoreBioinformatics/minos
     cd minos
-    git fetch --tags
-    latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
-    git checkout $latestTag
+    # Uncomment the following line to use the latest tag, rather than the latest *commit*, for Minos
+    # git fetch --tags && latestTag=$(git describe --tags `git rev-list --tags --max-count=1`) && git checkout $latestTag
     pip install .
 
     # Create global folder
@@ -71,6 +70,9 @@ From: ubuntu:20.04
 
 %apprun minos
     minos "@"
+
+%apprun tabulate
+    tabulate "@"
 
 %apprun CPC2
         CPC2 "@"
