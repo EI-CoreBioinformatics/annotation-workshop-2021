@@ -1,0 +1,313 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%test
+    export PATH=${PATH}:/usr/local/TransDecoder/:/usr/local/TransDecoder/util/:/usr/local/EVM/:/usr/local/salmon/bin/
+    export TRINITY_HOME=/usr/local/Trinity
+    export PATH=${PATH}:${TRINITY_HOME}:${TRINITY_HOME}/util:${TRINITY_HOME}/Analysis/DifferentialExpression/:${TRINITY_HOME}/Analysis/SuperTranscripts/
+    export PATH=${PATH}:${TRINITY_HOME}/util/support_scripts:${TRINITY_HOME}/util/misc:${TRINITY_HOME}/trinity-plugins/BIN
+    python3 --version
+    python3 -c "import numpy"
+    TransDecoder.Predict --version
+    # EVM dies with error code 255. We *cannot* test it otherwise the creation script will die.
+    # evidence_modeler.pl --help
+    Trinity --cite
+    # gffread --version
+    # gt -version
+    salmon --help
+    portcullis --version
+    stringtie --version
+    scallop --version
+    blastp -version  # Notice the *single* dash
+    prodigal -h
+    
+
+%environment
+    export PYTHONDONTWRITEBYTECODE=true
+    export PATH=${PATH}:/usr/local/TransDecoder/:/usr/local/TransDecoder/util/:/usr/local/salmon/bin/
+    export PATH=${PATH}:/usr/local/EVM/:/usr/local/EVM/EvmUtils:/usr/local/EVM/EvmUtils/misc:/usr/local/EVM/EvmUtils/misc/GFF2_toolkit
+    export TRINITY_HOME=/usr/local/Trinity
+    export PATH=${PATH}:${TRINITY_HOME}:${TRINITY_HOME}/util:${TRINITY_HOME}/Analysis/DifferentialExpression/:${TRINITY_HOME}/Analysis/SuperTranscripts/
+    export PATH=${PATH}:${TRINITY_HOME}/util/support_scripts:${TRINITY_HOME}/util/misc:${TRINITY_HOME}/trinity-plugins/BIN
+
+%post
+
+    ### Install your packages ###
+
+    export PYTHONDONTWRITEBYTECODE=true
+    export DEBIAN_FRONTEND=noninteractive
+    apt update
+    apt install -y software-properties-common
+    add-apt-repository universe
+    add-apt-repository multiverse
+    add-apt-repository restricted
+    apt update
+
+    # Install build dependencies, BLAST+, HMMER
+    apt install -y zlib1g-dev build-essential automake autoconf libcurl4-openssl-dev gnuplot \
+        wget git unzip cmake rsync \
+    	libbz2-dev libncurses-dev lzma-dev python3 python3-dev python3-numpy python3-pandas python3-scipy \
+	    python3-pip libtool liblzma-dev hmmer libboost-dev '^libboost-.*71' '^libboost-.*71-dev' libtbb-dev \
+	    augustus openjdk-14-jre
+
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 30
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 30
+    pip install wheel
+    pip install numpy pandas matplotlib setuptools sphinx tabulate snakemake
+
+    # Create src directory
+    mkdir -p /usr/local/src/ && cd /usr/local/src
+
+    # Samtools
+    export hts_version=1.11;
+    cd /usr/local/src/;
+    wget https://github.com/samtools/samtools/releases/download/${hts_version}/samtools-${hts_version}.tar.bz2
+    tar -xjf samtools-${hts_version}.tar.bz2
+    cd samtools-${hts_version} && autoreconf && ./configure && make -j 10 install
+    cd htslib-${hts_version} && make -j 10 install
+
+    # Portcullis
+    cd /usr/local/src
+    export port_version=1.2.2
+    wget -O portcullis-${port_version}.tar.gz https://github.com/maplesond/portcullis/archive/${port_version}.tar.gz
+    tar -xzf portcullis-${port_version}.tar.gz
+    cd portcullis-${port_version}
+    ./autogen.sh
+    ./configure
+    make -j 10
+    make -j 10 check
+    make install
+
+    # Genometools
+    mkdir -p /usr/local/src/genometools
+    cd /usr/local/src/genometools && wget https://github.com/genometools/genometools/archive/v1.6.1.zip && \
+        unzip v1.6.1.zip && mv genometools-1.6.1/* -t . && rm -rf v1.6.1.zip genometools-1.6.1
+    apt install -y liblua5.1-0-dev lua-filesystem-dev lua-lpeg-dev lua-md5-dev libexpat1-dev libtre-dev libsqlite3-dev
+    echo $(pwd)
+    ls -lrth
+    make cairo=no -j 10 # && cp bin/gt /usr/local/bin/ && cp -r gtdata
+    make cairo=no install
+
+    # Bowtie2 (for trinity)
+    cd /usr/local/src
+    export bwtv=2.4.2
+    wget https://github.com/BenLangmead/bowtie2/releases/download/v${bwtv}/bowtie2-${bwtv}-linux-x86_64.zip
+    unzip bowtie2-${bwtv}-linux-x86_64.zip
+    mv bowtie2-${bwtv}-linux-x86_64/bowtie2* -t /usr/local/bin
+
+    # Jellyfish (for Trinity)
+    apt install -y jellyfish
+
+    # Salmon (for trinity)
+    cd /usr/local/src
+    mkdir -p /usr/local/salmon
+    export slmv=1.4.0
+    wget https://github.com/COMBINE-lab/salmon/releases/download/v${slmv}/salmon-${slmv}_linux_x86_64.tar.gz
+    tar --strip-components=1 -C /usr/local/salmon/ -xaf salmon-${slmv}_linux_x86_64.tar.gz
+
+    # SEPP (Busco)
+    mkdir -p /usr/local/sepp
+    wget -qO- https://github.com/smirarab/sepp/archive/4.3.10.tar.gz | tar --strip-components=1 -C /usr/local/sepp -xz
+    cd /usr/local/sepp
+    python setup.py config -c
+    python setup.py bdist_wheel && pip install dist/*whl
+
+    # Trinity
+    export trtv=2.11.0
+    cd /usr/local/src/
+    wget -O trinity-${trtv}.tar.gz \
+      https://github.com/trinityrnaseq/trinityrnaseq/releases/download/v${trtv}/trinityrnaseq-v${trtv}.FULL.tar.gz
+    mkdir -p /usr/local/Trinity
+    tar --strip-components=1 -C /usr/local/Trinity -xaf trinity-${trtv}.tar.gz
+    cd /usr/local/Trinity
+    export TRINITY_HOME=/usr/local/Trinity
+    make -j 10 plugins
+    make -j 10
+    #BugFixes from Conda recipe
+    find $TRINITY_HOME -type f -print0 | xargs -0 sed -i.bak 's/FindBin::Bin/FindBin::RealBin/g'
+    find $TRINITY_HOME -type f -print0 | xargs -0 sed -i.bak 's/$JELLYFISH_DIR\/bin\/jellyfish/jellyfish/g'
+    sed -i.bak "s/\$ROOTDIR\/trinity-plugins\/Trimmomatic/\/opt\/anaconda1anaconda2anaconda3\/share\/trimmomatic/g" $TRINITY_HOME/Trinity
+    sed -i 's/my $TRIMMOMATIC = "\([^"]\+\)"/my $TRIMMOMATIC = '"'"'\1'"'"'/' $TRINITY_HOME/Trinity
+    sed -i 's/my $TRIMMOMATIC_DIR = "\([^"]\+\)"/my $TRIMMOMATIC_DIR = '"'"'\1'"'"'/' $TRINITY_HOME/Trinity
+    export TRINITY_HOME=/usr/local/Trinity
+    export PATH=${PATH}:${TRINITY_HOME}:${TRINITY_HOME}/util:${TRINITY_HOME}/Analysis/DifferentialExpression/:${TRINITY_HOME}/Analysis/SuperTranscripts/
+    export PATH=${PATH}:${TRINITY_HOME}/util/support_scripts:${TRINITY_HOME}/util/misc:${TRINITY_HOME}/trinity-plugins/BIN
+    Trinity --cite
+
+    # Scallop
+    cd /usr/local/src
+    export sclv=0.10.5;
+    mkdir -p scallop && wget https://github.com/Kingsford-Group/scallop/releases/download/v${sclv}/scallop-${sclv}.tar.gz
+    tar --strip-components=1 -xz -C /usr/local/src/scallop -f scallop-${sclv}.tar.gz;
+    cd /usr/local/src/scallop
+    ./configure
+    make -j 10 && make install
+
+    # Binary package installation
+    # Gffread
+    cd /usr/local/src
+    export gfrv=0.12.4
+    wget https://github.com/gpertea/gffread/releases/download/v${gfrv}/gffread-${gfrv}.Linux_x86_64.tar.gz
+    tar --wildcards --strip-components=1 -xz -C /usr/local/bin "gffread-*/gffread" -f gffread-${gfrv}.Linux_x86_64.tar.gz
+
+    # NCBI BLAST+
+    export blsv=2.11.0
+    wget -qO- https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.11.0+-x64-linux.tar.gz | \
+        tar --strip-components=2 -C /usr/local/bin/ --wildcards -xz ncbi-blast-2.11.0+/bin/*
+
+    # MetaEUK (BUSCO)
+    wget -qO- https://github.com/soedinglab/metaeuk/releases/download/4-a0f584d/metaeuk-linux-sse41.tar.gz | \
+        tar -C /usr/local/bin --strip-components=2 -xz metaeuk/bin/metaeuk
+
+    # Kallisto
+    cd /usr/local/src
+    export klv=0.46.1
+    wget https://github.com/pachterlab/kallisto/releases/download/v0.46.1/kallisto_linux-v${klv}.tar.gz
+    tar -xa --wildcards --strip-components=1 -C /usr/local/bin -f kallisto_linux-v${klv}.tar.gz "kallisto/kallisto"
+
+    # StringTie
+    cd /usr/local/src
+    export strv=2.1.4
+    wget https://github.com/gpertea/stringtie/releases/download/v${strv}/stringtie-${strv}.Linux_x86_64.tar.gz
+    tar --wildcards --strip-components=1 -xz -C /usr/local/bin "stringtie*/stringtie" -f stringtie-${strv}.Linux_x86_64.tar.gz
+
+    # STAR
+    export starv=2.7.7a
+    cd /usr/local/src
+    wget https://github.com/alexdobin/STAR/archive/${starv}.tar.gz
+    tar --strip-components=3 -C /usr/local/bin/ --wildcards -xz "*/bin/Linux_x86_64_static/STAR*" -f ${starv}.tar.gz
+    rm -f ${starv}.tar.gz
+
+    # k8 and Minimap2
+    wget https://github.com/attractivechaos/k8/releases/download/0.2.5/k8-0.2.5.tar.bz2
+    tar --wildcards --strip-components=1 -C . -xj "k8-*/k8-Linux" -f k8-0.2.5.tar.bz2
+    mv k8-Linux /usr/local/bin/k8
+    rm -f k8-0.2.5.tar.bz2
+    cd /usr/local/src
+    git clone https://github.com/lh3/minimap2 /usr/local/src/minimap2 && cd /usr/local/src/minimap2
+    make && mv minimap2 misc/paftools.js -t /usr/local/bin/
+
+    # Hisat2
+    cd /usr/local/src
+    wget https://cloud.biohpc.swmed.edu/index.php/s/oTtGWbWjaxsQ2Ho/download -O hisat2.2.1.zip
+    unzip -j -d /usr/local/bin/ hisat2.2.1.zip "*/hisat*" "*/extract_*"
+
+    # Gmap
+    mkdir -p /usr/local/src/gmap
+    wget -P /usr/local/src/gmap http://research-pub.gene.com/gmap/src/gmap-gsnap-2020-12-17.tar.gz
+    cd /usr/local/src/gmap
+    tar --strip-components=1 -xaf gmap-gsnap-2020-12-17.tar.gz
+    ./configure && make -j 10 install
+
+    # TransDecoder
+    cd /usr/local/src
+    apt install -y perl python3 r-base-core liburi-perl
+    mkdir -p /usr/local/TransDecoder
+    wget https://github.com/TransDecoder/TransDecoder/archive/TransDecoder-v5.5.0.tar.gz
+    tar -xz --strip-components=1 -C /usr/local/TransDecoder -f TransDecoder-v5.5.0.tar.gz
+    cd /usr/local/TransDecoder
+    # Following from Conda recipe
+    find ./util -name '*.pl' -exec sed -i.bak 's/FindBin::Bin/FindBin::RealBin/' {} +
+    find ./util -name '*.bak' -exec rm {} +
+
+    # EVM
+    mkdir -p /usr/local/EVM/
+    wget -O EVM-v1.1.1.zip https://github.com/EVidenceModeler/EVidenceModeler/archive/v1.1.1.zip
+    unzip EVM-v1.1.1.zip
+    mv EVidenceModeler-1.1.1/* -t /usr/local/EVM/
+    chmod +x /usr/local/EVM/evidence_modeler.pl
+    find /usr/local/EVM/EvmUtils/ -type f -name "*.pl" | xargs chmod +x
+
+    # Diamond
+    cd /usr/local/src
+    export dmd_version=2.0.6
+    wget https://github.com/bbuchfink/diamond/releases/download/v2.0.6/diamond-linux64.tar.gz
+    tar -xz -C /usr/local/bin/ -f diamond-linux64.tar.gz
+
+    # Prodigal
+    export prod_version=2.6.3
+    wget -O /usr/local/bin/prodigal https://github.com/hyattpd/Prodigal/releases/download/v2.6.3/prodigal.linux
+    chmod +x /usr/local/bin/prodigal
+    prodigal -h
+
+    # Busco
+    export bscv=5.0.0
+    cd /usr/local/src/
+    mkdir -p busco
+    wget -qO- https://gitlab.com/ezlab/busco/-/archive/${bscv}/busco-${bscv}.tar.gz | \
+        tar -C busco --strip-components=1 -xz
+    cd busco
+    python setup.py bdist_wheel && pip install dist/*whl
+
+    # Create global folder and cleanup
+    apt remove --autoremove -y automake autoconf curl wget git unzip cmake rsync libboost-dev \
+    	build-essential '^libboost-.*71-dev'
+    apt clean -y
+    mkdir -p /global && cd /global && rm -rf /usr/local/src/*
+
+
+%apprun snakemake
+	snakemake "@"
+
+%apprun prodigal
+    prodigal "@"
+
+%apprun samtools
+    samtools "@"
+
+%apprun diamond
+    diamond "@"
+
+%apprun portcullis
+    portcullis "@"
+
+%apprun junctools
+    junctools "@"
+
+%apprun kallisto
+    kallisto "@"
+
+%apprun stringtie
+    stringtie "@"
+
+%apprun scallop
+    scallop "@"
+
+%apprun gmap
+    gmap "@"
+
+%apprun gffread
+    gffread "@"
+
+%apprun gt
+    gt "@"
+
+%apprun minimap2
+    minimap2 "@"
+
+%apprun hisat2
+    hisat2 "@"
+
+%apprun hisat2_build
+    hisat2_build "@"
+
+%apprun gmap_build
+    gmap_build "@"
+
+%apprun gsnap
+    gsnap "@"
+
+%apprun gnuplot
+    gnuplot "@"
+
+%apprun plot-bamstats
+    plot-bamstats "@"
+
+%apprun EVM
+    perl /usr/local/EVM/evidence_modeler.pl "@"
+
+%apprun Trinity
+    Trinity "@"
+
+%apprun metaeuk
+    metaeuk "@"
