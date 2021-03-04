@@ -1,11 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 
+import warnings
+warnings.filterwarnings("ignore")
 import argparse
 import collections
 import sys
 import tabulate
 import pandas as pd
 import re
+
 
 __doc__ = "Script to collapse various stat files into one."
 
